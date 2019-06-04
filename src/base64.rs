@@ -1,10 +1,16 @@
 pub mod bytes {
     use serde::{de, Deserialize, Deserializer, Serializer};
+    use std::borrow::{Borrow, Cow};
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
-        <&str>::deserialize(deserializer).and_then(|value| {
-            base64::decode(&value).map_err(|err| de::Error::custom(err.to_string()))
-        })
+    pub fn deserialize<'de, D: Deserializer<'de>, T: From<Vec<u8>>>(
+        deserializer: D,
+    ) -> Result<T, D::Error> {
+        let text: Cow<str> = Deserialize::deserialize(deserializer)?;
+        let text_str: &str = text.borrow();
+
+        base64::decode(text_str)
+            .map_err(|err| de::Error::custom(err.to_string()))
+            .map(|vec| From::from(vec))
     }
 
     pub fn serialize<T: AsRef<[u8]>, S: Serializer>(
@@ -18,11 +24,13 @@ pub mod bytes {
 pub mod f32 {
     use byteorder::{ByteOrder, LittleEndian};
     use serde::{de, Deserialize, Deserializer, Serializer};
+    use std::borrow::{Borrow, Cow};
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<f32>, D::Error> {
-        let bytes = <&str>::deserialize(deserializer).and_then(|value| {
-            base64::decode(&value).map_err(|err| de::Error::custom(err.to_string()))
-        })?;
+        let text: Cow<str> = Deserialize::deserialize(deserializer)?;
+        let text_str: &str = text.borrow();
+
+        let bytes = base64::decode(text_str).map_err(|err| de::Error::custom(err.to_string()))?;
 
         let mut result = vec![0.0; bytes.len() / 4];
         LittleEndian::read_f32_into(&bytes, &mut result);

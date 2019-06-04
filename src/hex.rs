@@ -1,5 +1,6 @@
 pub mod u8x6 {
     use serde::{de, Deserialize, Deserializer, Serializer};
+    use std::borrow::{Borrow, Cow};
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<[u8; 6], D::Error> {
         let parse_hex = |value: &str| {
@@ -13,7 +14,8 @@ pub mod u8x6 {
             };
             Ok([d(0..2)?, d(2..4)?, d(4..6)?, d(6..8)?, d(8..10)?, d(10..12)?])
         };
-        <&str>::deserialize(deserializer).and_then(|value| parse_hex(value))
+        let text: Cow<str> = Deserialize::deserialize(deserializer)?;
+        parse_hex(text.borrow())
     }
 
     pub fn serialize<S: Serializer>(value: &[u8; 6], serializer: S) -> Result<S::Ok, S::Error> {
@@ -23,10 +25,12 @@ pub mod u8x6 {
 
 pub mod bytes {
     use serde::{de, Deserialize, Deserializer, Serializer};
+    use std::borrow::{Borrow, Cow};
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
-        <&str>::deserialize(deserializer)
-            .and_then(|value| hex::decode(&value).map_err(|err| de::Error::custom(err.to_string())))
+        let text: Cow<str> = Deserialize::deserialize(deserializer)?;
+        let text_str: &str = text.borrow();
+        hex::decode(text_str).map_err(|err| de::Error::custom(err.to_string()))
     }
 
     pub fn serialize<T: AsRef<[u8]>, S: Serializer>(

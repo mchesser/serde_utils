@@ -17,7 +17,7 @@ Then annotate structs using:
 
 ```rust
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Data {
     #[serde(with = "serde_utils::hex::u8x6")]
     mac_addr: [u8; 6]
